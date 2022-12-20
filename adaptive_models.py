@@ -1,5 +1,5 @@
-import random
 from misc import *
+
 
 class BaseFrequencyTable:
   """Base frequency table class
@@ -20,6 +20,7 @@ class BaseFrequencyTable:
     for symbol in sample_input:
       freq[symbol] = freq.get(symbol, 0) + 1
 
+    # private
     self.__freq = freq
     self.__freq_total = sum(freq.values())
     self.__prob = {k: f/self.__freq_total for k, f in self.__freq.items()}
@@ -42,7 +43,7 @@ class BaseFrequencyTable:
       prev_freq += freq
     return cdf
 
-  def probability(self, context: list | None = None, return_array=False):
+  def probability(self, context=None, return_array=False):
     if return_array:
       # for rANS
       return [self.__prob[sym] for sym in self.symbols]
@@ -51,7 +52,7 @@ class BaseFrequencyTable:
   def predict(self, symbol, context=None):
     return self.probability(context)[symbol]
 
-  def entropy(self, N: list | int = 1):
+  def entropy(self, N=1):
     """Compute entropy of prob. distribution
     Optionally return expected information content given the input data or its size
 
@@ -149,7 +150,7 @@ class PPMModel(BaseFrequencyTable):
     _, freq = self._get_context_stat(context)
     return freq
 
-  def probability(self, context: list | None = None, return_array=False):
+  def probability(self, context=None, return_array=False):
     prob, _ = self._get_context_stat(context)
     if return_array:
       return [prob[sym] for sym in self.symbols]
@@ -170,11 +171,10 @@ class MultiPPM(PPMModel):
   def update_weights(self, symbol: str, context: str):
     # Update the weights of the models based on their prediction accuracy
     weights = self.weights
-    symbol_true_probability = 1
-    # symbol_true_probability = (context+symbol).count(symbol) / (len(context)+1)
     for i, model in enumerate(self.models):
-      error = abs(model.predict(symbol, context) - symbol_true_probability)
-      weights[i] *= 1 - error
+      # error = abs(1 - model.predict(symbol, context))
+      # weights[i] *= 1 - error
+      weights[i] *= model.predict(symbol, context)
       weights[i] = max(weights[i], 0.00001)  # Additive smoothing
     # Normalize the weights so they sum to 1
     total_weights = sum(weights)
@@ -192,7 +192,7 @@ class MultiPPM(PPMModel):
     # all models should have the same frequency
     return self.models[-1].freq(context)
 
-  def probability(self, context: list | None = None, return_array=False):
+  def probability(self, context=None, return_array=False):
     return self._combine_probabilities(context)
 
   def _combine_probabilities(self, context=None):
@@ -206,3 +206,161 @@ class MultiPPM(PPMModel):
       combined_probs[symbol] = symbol_prob
     return combined_probs
 
+
+# Binary models
+
+class BaseBinaryModel(BaseFrequencyTable):
+  """Binary Adaptive model
+  """
+
+  def __init__(self):
+    super().__init__({'0': .5, '1': .5})
+
+    self.name = "Base Binary"
+    self.symbols = ['0', '1']
+    self._symbol_index = {'0': 0, '1': 1}
+
+    self.scale_factor = 4096
+    self.prob_1_scaled = self.scale_factor >> 1  # 0.5, range -> [31, 4065]
+
+  def update(self, symbol, context=None):
+    if symbol == '0':
+      self.prob_1_scaled -= self.prob_1_scaled >> 5
+    else:
+      self.prob_1_scaled += (self.scale_factor - self.prob_1_scaled) >> 5
+
+  def probability(self, context=None):
+    p1 = self.prob_1_scaled / self.scale_factor
+    return {'0': 1 - p1, '1': p1}
+
+  def cdf(self, context=None):
+    prob_1_scaled = self.prob_1_scaled
+    if isinstance(context, int):
+      prob_1_scaled = context
+    return {
+        '1': Range(0, prob_1_scaled),
+        '0': Range(prob_1_scaled, self.scale_factor)
+    }
+
+  def freq(self, context=None):
+    raise NotImplementedError
+
+
+class BinaryPPM(BaseBinaryModel):
+  """Prediction by partial matching for binary symbols
+  0 and 1
+  """
+
+  def __init__(self, k=3, check_lower=True):
+    super().__init__()
+    assert (-1 < k)
+    self.name = f"Binary-PPM<{k}>"
+    self.context_size = k
+    self.check_lower = check_lower
+    self.prob_table = {k: {} for k in range(k+1)}
+    self.default_prob = self.prob_1_scaled
+
+  def _get_context_prob(self, context=None):
+    """Return scaled probability of '1' from a given context
+    """
+
+    if not context:
+      single = self.prob_table[0]
+      prob_1_scaled = single[''] if len(single) else self.default_prob
+      return prob_1_scaled
+
+    # get last k(context size) symbols from context
+    context = context[(len(context) - self.context_size):]
+    for s in range(len(context), -1, -1):
+      if context in self.prob_table[s]:
+        prob_1_scaled = self.prob_table[s][context]
+        return prob_1_scaled
+      context = context[1:]
+      if not self.check_lower:
+        break
+
+    return self._get_context_prob()
+
+  def update(self, symbol: str, context: str):
+    # get last k(context size) symbols from context
+    context = context[(len(context) - self.context_size):]
+    assert (symbol in self.symbols)  # 0 or 1
+    for i in range(len(context)+1):
+      suffix = context[i:]
+      ln = len(suffix)
+      if suffix not in self.prob_table[ln]:
+        self.prob_table[ln][suffix] = self.default_prob
+
+      prob_1_scaled = self.prob_table[ln][suffix]
+      if symbol == '0':
+        prob_1_scaled -= prob_1_scaled >> 5
+      else:
+        prob_1_scaled += (self.scale_factor - prob_1_scaled) >> 5
+
+      self.prob_table[ln][suffix] = prob_1_scaled
+      if not self.check_lower and i == 1:
+        break
+
+  def probability(self, context=None):
+    prob_1_scaled = self._get_context_prob(context)
+    p1 = prob_1_scaled / self.scale_factor
+    return {'1': p1, '0': 1 - p1}
+
+  def predict(self, symbol, context=None):
+    return self.probability(context)[symbol]
+
+  def cdf(self, context=None):
+    prob_1_scaled = self._get_context_prob(context)
+    return super().cdf(prob_1_scaled)
+
+
+class MultiBinaryPPM(BinaryPPM):
+  """Mix multiple Binary PPM models to make prediction.
+  Uses weighted average to combine proabilities
+  """
+
+  def __init__(self, check_lower=False):
+    super().__init__(3, check_lower)
+    self.name = "Binary-PPM-mix<0-5>"
+    self.models = [BinaryPPM(k, check_lower) for k in range(6)]
+    self.weights = [1/len(self.models)] * len(self.models)
+
+  def update_weights(self, symbol: str, context: str):
+    # Update the weights of the models based on their prediction accuracy
+    weights = self.weights
+    for i, model in enumerate(self.models):
+      weights[i] *= model.predict(symbol, context)
+      weights[i] = max(weights[i], 0.00001)
+    # Normalize the weights so they sum to 1
+    total_weights = sum(weights)
+    weights = [weight / total_weights for weight in weights]
+    self.weights = weights
+
+  def update(self, symbol: str, context: str):
+    for model in self.models:
+      model.update(symbol, context)
+
+    # update the weights of the models
+    self.update_weights(symbol, context)
+
+  def probability(self, context=None, return_array=False):
+    return self._combine_probabilities(context)
+
+  def cdf(self, context=None):
+    P = self._combine_probabilities(context)
+    prob_1_scaled = round(P['1'] * self.scale_factor)
+    return {
+        '1': Range(0, prob_1_scaled),
+        '0': Range(prob_1_scaled, self.scale_factor)
+    }
+
+  def _combine_probabilities(self, context=None):
+    # Combine the probabilities using a weighted average
+    combined_probs = {}
+    for symbol in self.symbols:
+      symbol_prob = 0
+      for i in range(len(self.models)):
+        symbol_prob += self.weights[i] * \
+            self.models[i].predict(symbol, context)
+      combined_probs[symbol] = symbol_prob
+    return combined_probs

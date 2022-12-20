@@ -12,8 +12,17 @@ def mbit(m):
   return R(2**(m - 1), 2**m - 1)
 
 
+# partition string into grams of length n
+def grams(s, n=1):
+  r = []
+  while s:
+    r += [s[:n]]
+    s = s[n:]
+  return r
+
+
 # entropy
-def H(X, N: list | int = 1):
+def H(X, N: str | list | int = 1):
   h = 0
   if not isinstance(N, int):
     # N is our data
@@ -32,6 +41,16 @@ def H(X, N: list | int = 1):
   return h * N
 
 
+# entropy from given string
+def h(S: str):
+  N, C = len(S), {}
+  for c in S:
+    C[c] = C.get(c, 0) + 1
+  X = {symbol: freq/N for symbol, freq in C.items()}
+  # return (expected, actual information content)
+  return H(X, N), H(X, S)
+
+
 # generate string, given count and probability
 def generate_data(probs, N=10, shuffle=False):
   assert (sum(probs.values()) <= 1)
@@ -47,10 +66,10 @@ def generate_data(probs, N=10, shuffle=False):
     r = N - len(s)
     s += maxS * r
   if shuffle:
-    s = list(s)
     random.shuffle(s)
     s = "".join(s)
-  return s
+  sym_len = len(list(probs.keys())[0])
+  return grams(s, sym_len)
 
 
 # shuffle a string
@@ -88,3 +107,47 @@ class Range:
 #     S = [L[i] for i in Tx]
 #     S.reverse()
 #     return ''.join(S)
+
+
+# def feistel(data, key, rounds):
+#     # Split the data into left and right halves
+#     left = data[:len(data) // 2]
+#     right = data[len(data) // 2:]
+
+#     # Perform the specified number of rounds
+#     for i in range(rounds):
+#         # XOR the right half with the round key
+#         right = right ^ key
+
+#         # Swap the left and right halves
+#         left, right = right, left
+
+#     # Concatenate the left and right halves to form the encrypted data
+#     return left + right
+
+# def decrypt(data, key, rounds):
+#     # Split the data into left and right halves
+#     left = data[:len(data) // 2]
+#     right = data[len(data) // 2:]
+
+#     # Perform the specified number of rounds
+#     for i in range(rounds):
+#         # Swap the left and right halves
+#         left, right = right, left
+
+#         # XOR the right half with the round key
+#         right = right ^ key
+
+#     # Concatenate the left and right halves to form the decrypted data
+#     return left + right
+
+# # Encrypt some data
+# data = b"Hello, world!"
+# key = b"secret"
+# encrypted_data = feistel(data, key, 10)
+
+# # Decrypt the data
+# decrypted_data = decrypt(encrypted_data, key, 10)
+
+# # Verify that the original data is recovered
+# assert data == decrypted_data

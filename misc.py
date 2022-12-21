@@ -23,6 +23,12 @@ def grams(s, n=1):
 
 # entropy
 def H(X, N: str | list | int = 1):
+  """Compute entropy from two input types
+
+  Args:
+      X (_type_): Probability distribution
+      N (str | list | int, optional): data or its size. Defaults to 1.
+  """
   h = 0
   if not isinstance(N, int):
     # N is our data
@@ -41,14 +47,32 @@ def H(X, N: str | list | int = 1):
   return h * N
 
 
+def HF(freq_table: dict):
+  """compute entropy from a frequency table
+
+  Args:
+      freq_table (dict): frequency table
+  """
+  h, N = 0, sum(freq_table.values())
+  for sym, freq in freq_table.items():
+    h += freq * -math.log2(freq/N)
+    # h += sum([-math.log2(freq/N)] * freq)
+  return h
+
+
 # entropy from given string
 def h(S: str):
-  N, C = len(S), {}
+  """Compute entropy from given string
+
+  Args:
+      S (str): _description_
+  """
+  N, freq = len(S), {}
   for c in S:
-    C[c] = C.get(c, 0) + 1
-  X = {symbol: freq/N for symbol, freq in C.items()}
-  # return (expected, actual information content)
-  return H(X, N), H(X, S)
+    freq[c] = freq.get(c, 0) + 1
+  X = {symbol: count/N for symbol, count in freq.items()}
+  # actual information content
+  return H(X, S)
 
 
 # generate string, given count and probability
@@ -66,8 +90,7 @@ def generate_data(probs, N=10, shuffle=False):
     r = N - len(s)
     s += maxS * r
   if shuffle:
-    random.shuffle(s)
-    s = "".join(s)
+    s = shuffle_string(s)
   sym_len = len(list(probs.keys())[0])
   return grams(s, sym_len)
 

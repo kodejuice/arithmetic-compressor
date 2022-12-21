@@ -1,5 +1,8 @@
 from misc import *
 
+RATE = 10  # the closer to 0 this is, the faster the probabilities adapts
+ADAPT_RATE = 1 - 1 / (1 << RATE)
+
 
 class BaseFrequencyTable:
   """Base frequency table class
@@ -14,31 +17,33 @@ class BaseFrequencyTable:
     self.symbols = symbols
     # map symbols to indexes (used in the ANS compressor)
     self._symbol_index = {symbol: i for i, symbol in enumerate(self.symbols)}
-
-    freq = {}
-    sample_input = generate_data(probability)
-    for symbol in sample_input:
-      freq[symbol] = freq.get(symbol, 0) + 1
+    self.scale_factor = 4096
 
     # private
-    self.__freq = freq
-    self.__freq_total = sum(freq.values())
-    self.__prob = {k: f/self.__freq_total for k, f in self.__freq.items()}
+    self.__freq = {sym: 0 for sym in self.symbols}
+    self.__freq_total = 0
+    self.__prob = dict(probability)
 
   def update(self, symbol, context=None):
-    self.__freq[symbol] += 1
+    self.__freq[symbol] = self.__freq.get(symbol, 0) + 1
     self.__freq_total += 1
     self.__prob = {k: f/self.__freq_total for k, f in self.__freq.items()}
 
   def freq(self, context=None):
     return self.__freq
 
+  def scaled_freq(self, context=None):
+    P = self.probability(context).items()
+    freq = {sym: round(self.scale_factor * prob) for sym, prob in P}
+    return freq
+
   def cdf(self, context=None):
     """Create a cummulative distribution function from a probability dist.
     """
     cdf = {}
     prev_freq = 0
-    for sym, freq in list(self.freq(context).items()):
+    freq = self.scaled_freq(context).items()
+    for sym, freq in freq:
       cdf[sym] = Range(prev_freq, prev_freq + freq)
       prev_freq += freq
     return cdf
@@ -53,13 +58,7 @@ class BaseFrequencyTable:
     return self.probability(context)[symbol]
 
   def entropy(self, N=1):
-    """Compute entropy of prob. distribution
-    Optionally return expected information content given the input data or its size
-
-    Args:
-        N (list | int, optional): input data or its size. Defaults to 1.
-    """
-    return H(self.probability(), N)
+    return HF(self.freq())
 
   def test_model(self, gen_random=True, N=10000):
     """Test efficiency of the adaptive frequency model
@@ -70,66 +69,80 @@ class BaseFrequencyTable:
     else:
       symbol_pool = generate_data(self.probability(), N, False)
 
-    cp = 0
+    error = 0
     context = ""
     for i in range(N-1):
       p = self.probability(context)
       rand_symbol = symbol_pool[i]
-      cp += 1 - p[rand_symbol]
+      error += 1 - p[rand_symbol]
       self.update(rand_symbol, context)
       context += rand_symbol
-    print(f"percentage of error({self.name}): {cp/N}")
+    print(f"percentage of error({self.name}): {error/N}")
 
 
-class PPMModel(BaseFrequencyTable):
+class SimpleAdaptiveModel(BaseFrequencyTable):
+  def __init__(self, probability: dict, update_rate=ADAPT_RATE):
+    assert (0 <= update_rate <= 1)
+    super().__init__(probability)
+    self.name = "Simple adaptive"
+
+    self.__freq = {}
+    self.__prob = dict(probability)
+    self.update_rate = update_rate
+
+  def update(self, symbol, context=None):
+    assert (symbol in self.symbols)
+    self.__freq[symbol] = self.__freq.get(symbol, 0) + 1
+    for sym, prob in self.__prob.items():
+      if sym == symbol:
+        self.__prob[sym] = prob * self.update_rate + (1 - self.update_rate)
+      else:
+        self.__prob[sym] *= self.update_rate
+
+  def freq(self, context=None):
+    return self.__freq
+
+  def probability(self, context=None, return_array=False):
+    return self.__prob
+
+
+class PPMModel(SimpleAdaptiveModel):
   """Prediction by partial matching model
+  table -> [context-size][context][probability of symbols]
+  e.g, table[1]['1'] = {'0': 0.5, '1': 0.5}
+       table[2]['01'] = {'0': 0.73, '1': 0.27}
   """
 
-  def __init__(self, symbols: dict, k=3, check_lower_models=True):
-    symbols = list(symbols)
-    super().__init__({k: 1/len(symbols) for k in symbols})
+  def __init__(self, symbols: dict, k=3, check_lower_models=True, update_rate=ADAPT_RATE):
+    super().__init__({sym: -1 for sym in symbols}, update_rate)
     assert (-1 < k)
     self.name = f"PPM<{k}>"
     self.context_size = k
     self.check_lower_models = check_lower_models
     self.table = {k: {} for k in range(k+1)}
 
-  def _get_context_stat(self, context=None):
-    """Return probability and frequency of a given context
+  def get_context_probability(self, context=None):
+    """Return probability of a given context
     """
     if not context:
-      freq = dict(self.table[0]['']) if len(self.table[0]) else {}
-      if len(freq) != len(self.symbols):
-        for c in self.symbols:  # add missing symbols
-          freq[c] = freq.get(c, 1)
-      freq_total = sum(freq.values())
-      prob = {k: f/freq_total for k, f in freq.items()}
-      return (prob, freq)
+      prob = dict(self.table[0]['']) if len(self.table[0]) else {}
+      if len(prob) != len(self.symbols):
+        len_sym = len(self.symbols)
+        return {sym: 1/len_sym for sym in self.symbols}
+      return prob
 
     # get last k(context size) symbols from context
     context = context[(len(context) - self.context_size):]
     for s in range(len(context), -1, -1):
       if context in self.table[s]:
-        context_freq_table = self.table[s][context]
-        # if some symbols aren't in this table,
-        # initialize them with value 1
-        for c in self.symbols:
-          if c not in context_freq_table:
-            context_freq_table[c] = 1
-
-        # update frequency and probability table
-        freq = context_freq_table
-        freq_total = sum(freq.values())
-        prob = {k: f / freq_total for k, f in freq.items()}
-
-        return (prob, freq)
+        return self.table[s][context]
       context = context[1:]
 
       if not self.check_lower_models:
         break
 
     # just get the stat with an empty context
-    return self._get_context_stat()
+    return self.get_context_probability()
 
   def update(self, symbol: str, context: str):
     # get last k(context size) symbols from context
@@ -140,18 +153,28 @@ class PPMModel(BaseFrequencyTable):
       ln = len(suffix)
       if suffix not in self.table[ln]:
         self.table[ln][suffix] = {}
-      if symbol not in self.table[ln][suffix]:
-        self.table[ln][suffix][symbol] = 0
-      self.table[ln][suffix][symbol] += 1
+
+      T = self.table[ln][suffix]
+      N = len(self.symbols)
+      if len(T) == 0:
+        for sym in self.symbols:
+          T[sym] = 1 / N
+
+      # update probabilities
+      for sym, prob in T.items():
+        if sym == symbol:
+          T[sym] = prob * self.update_rate + (1 - self.update_rate)
+        else:
+          T[sym] *= self.update_rate
+
       if not self.check_lower_models and i == 1:
         break
 
   def freq(self, context=None):
-    _, freq = self._get_context_stat(context)
-    return freq
+    return self.scaled_freq(context)
 
   def probability(self, context=None, return_array=False):
-    prob, _ = self._get_context_stat(context)
+    prob = self.get_context_probability(context)
     if return_array:
       return [prob[sym] for sym in self.symbols]
     return prob
@@ -162,18 +185,17 @@ class MultiPPM(PPMModel):
   Uses weighted average to combine proabilities
   """
 
-  def __init__(self, symbols: dict, check_lower=False):
+  def __init__(self, symbols: dict, models=6, check_lower=False):
     super().__init__(symbols)
-    self.name = "PPM-mix<0-5>"
-    self.models = [PPMModel(symbols, k, check_lower) for k in range(6)]
+    assert (models > 1)
+    self.name = f"Multi-PPM<0-{models}>"
+    self.models = [PPMModel(symbols, k, check_lower) for k in range(models+1)]
     self.weights = [1/len(self.models)] * len(self.models)
 
   def update_weights(self, symbol: str, context: str):
     # Update the weights of the models based on their prediction accuracy
     weights = self.weights
     for i, model in enumerate(self.models):
-      # error = abs(1 - model.predict(symbol, context))
-      # weights[i] *= 1 - error
       weights[i] *= model.predict(symbol, context)
       weights[i] = max(weights[i], 0.00001)  # Additive smoothing
     # Normalize the weights so they sum to 1
@@ -213,21 +235,19 @@ class BaseBinaryModel(BaseFrequencyTable):
   """Binary Adaptive model
   """
 
-  def __init__(self):
+  def __init__(self, update_rate=RATE):
     super().__init__({'0': .5, '1': .5})
 
     self.name = "Base Binary"
-    self.symbols = ['0', '1']
-    self._symbol_index = {'0': 0, '1': 1}
-
-    self.scale_factor = 4096
+    self.update_rate = update_rate
     self.prob_1_scaled = self.scale_factor >> 1  # 0.5, range -> [31, 4065]
 
   def update(self, symbol, context=None):
     if symbol == '0':
-      self.prob_1_scaled -= self.prob_1_scaled >> 5
+      self.prob_1_scaled -= self.prob_1_scaled >> self.update_rate
     else:
-      self.prob_1_scaled += (self.scale_factor - self.prob_1_scaled) >> 5
+      self.prob_1_scaled += (self.scale_factor -
+                             self.prob_1_scaled) >> self.update_rate
 
   def probability(self, context=None):
     p1 = self.prob_1_scaled / self.scale_factor
@@ -242,16 +262,13 @@ class BaseBinaryModel(BaseFrequencyTable):
         '0': Range(prob_1_scaled, self.scale_factor)
     }
 
-  def freq(self, context=None):
-    raise NotImplementedError
-
 
 class BinaryPPM(BaseBinaryModel):
   """Prediction by partial matching for binary symbols
   0 and 1
   """
 
-  def __init__(self, k=3, check_lower=True):
+  def __init__(self, k=3, check_lower=True, update_rate=RATE):
     super().__init__()
     assert (-1 < k)
     self.name = f"Binary-PPM<{k}>"
@@ -259,6 +276,7 @@ class BinaryPPM(BaseBinaryModel):
     self.check_lower = check_lower
     self.prob_table = {k: {} for k in range(k+1)}
     self.default_prob = self.prob_1_scaled
+    self.update_rate = update_rate
 
   def _get_context_prob(self, context=None):
     """Return scaled probability of '1' from a given context
@@ -293,9 +311,10 @@ class BinaryPPM(BaseBinaryModel):
 
       prob_1_scaled = self.prob_table[ln][suffix]
       if symbol == '0':
-        prob_1_scaled -= prob_1_scaled >> 5
+        prob_1_scaled -= prob_1_scaled >> self.update_rate
       else:
-        prob_1_scaled += (self.scale_factor - prob_1_scaled) >> 5
+        prob_1_scaled += (self.scale_factor -
+                          prob_1_scaled) >> self.update_rate
 
       self.prob_table[ln][suffix] = prob_1_scaled
       if not self.check_lower and i == 1:
@@ -314,53 +333,15 @@ class BinaryPPM(BaseBinaryModel):
     return super().cdf(prob_1_scaled)
 
 
-class MultiBinaryPPM(BinaryPPM):
+class MultiBinaryPPM(MultiPPM):
   """Mix multiple Binary PPM models to make prediction.
   Uses weighted average to combine proabilities
   """
 
-  def __init__(self, check_lower=False):
-    super().__init__(3, check_lower)
-    self.name = "Binary-PPM-mix<0-5>"
-    self.models = [BinaryPPM(k, check_lower) for k in range(6)]
+  def __init__(self, models=6, check_lower=False):
+    assert (models >= 2)
+    super().__init__(['0', '1'], 3, check_lower)
+    self.name = f"Multi-Binary-PPM<0-{models}>"
+    # self.models = [PPMModel(['0','1'], k, check_lower) for k in range(models+1)]
+    self.models = [BinaryPPM(k, check_lower) for k in range(models+1)]
     self.weights = [1/len(self.models)] * len(self.models)
-
-  def update_weights(self, symbol: str, context: str):
-    # Update the weights of the models based on their prediction accuracy
-    weights = self.weights
-    for i, model in enumerate(self.models):
-      weights[i] *= model.predict(symbol, context)
-      weights[i] = max(weights[i], 0.00001)
-    # Normalize the weights so they sum to 1
-    total_weights = sum(weights)
-    weights = [weight / total_weights for weight in weights]
-    self.weights = weights
-
-  def update(self, symbol: str, context: str):
-    for model in self.models:
-      model.update(symbol, context)
-
-    # update the weights of the models
-    self.update_weights(symbol, context)
-
-  def probability(self, context=None, return_array=False):
-    return self._combine_probabilities(context)
-
-  def cdf(self, context=None):
-    P = self._combine_probabilities(context)
-    prob_1_scaled = round(P['1'] * self.scale_factor)
-    return {
-        '1': Range(0, prob_1_scaled),
-        '0': Range(prob_1_scaled, self.scale_factor)
-    }
-
-  def _combine_probabilities(self, context=None):
-    # Combine the probabilities using a weighted average
-    combined_probs = {}
-    for symbol in self.symbols:
-      symbol_prob = 0
-      for i in range(len(self.models)):
-        symbol_prob += self.weights[i] * \
-            self.models[i].predict(symbol, context)
-      combined_probs[symbol] = symbol_prob
-    return combined_probs

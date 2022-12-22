@@ -2,26 +2,28 @@
 from compressors import AECompressor, rANSCompressor
 from misc import *
 from adaptive_models import BaseFrequencyTable,\
-    BaseBinaryModel,\
     PPMModel,\
     MultiPPM,\
-    BinaryPPM,\
-    MultiBinaryPPM\
+    SimpleAdaptiveModel\
 
+# symbols = [(bin(i)[2:])[-2:] for i in range(0b00, 0b11+1)]
+# symbols = ['00', '01', '10', '11']
 symbols = ['0', '1']
+# symbols = ['a', 'b', 'c']
 # symbols = ['00', '01', '10', '11']
 prob = {s: 1/len(symbols) for s in symbols}
 
 
 def init_model():
   # model = BaseFrequencyTable(prob)
-  # model = PPMModel(prob, 1)
-  # model = MultiPPM(prob)
-  # model = BaseBinaryModel()
-  # model = BinaryPPM()
-  model = MultiBinaryPPM()
+  # model = PPMModel(prob, 5)
+  # model = SimpleAdaptiveModel(prob)
+  model = MultiPPM(prob, 8)
   AEC = AECompressor(model)
   return AEC
+  # model = BaseBinaryModel()
+  # model = BinaryPPM()
+  # model = MultiBinaryPPM(8)
 
 
 low_entropy = []
@@ -30,78 +32,59 @@ for N in range(2**16 - 1):
   # AEC = init_model()
   num = bin(N)[2:]
   num = (16-len(num))*"0" + num
-  E, A = h(num)
+  A = h(num)
   if A <= 15:
     # if AEC.compress(num).__len__() < 15:
     low_entropy += [num]
   else:
     C += 1
-print('low entropy count:', len(low_entropy), f"[{C}]")
+print('low entropy count:', len(low_entropy), f"vs [{C}]")
 
 
-BC = 90
+BC = 50
 print(BC*16)
 
-for _ in range(1000):
+for i in range(1000):
   AEC = init_model()
 
   n = ""
-  for _ in range(BC):
+  for __ in range(BC):
     n += random.choice(low_entropy)
-  # n = bin(mbit(256))[2:]
+  # n = bin(mbit(1440))[2:]
 
   # n = grams(n, len(symbols[0]))
   L = AEC.compress(n).__len__()
-  if L > len(n):
-    print(h(n), L, "\n", n)
+  if L >= len(n):
+    print(f"[{i}]. len({len(n)})", h(n), L, "\n", n)
   # print(h(n), "\n", L, " |", "".join(n))
   # print(AEC.model.weights, "\n")
 
 
-# BinaryPPM().test_model(False)
-# BaseBinaryModel().test_model(False)
-# PPMModel(['0','1']).test_model(False)
-# MultiPPM(['0', '1']).test_model(False)
-# MultiBinaryPPM().test_model(False)
+# AEC = init_model()
+# D = "000010100000000101100101110111111000100010001001110100000000100111101101011001111110011111011011011000000101000111101100101111010000100001001100111101100011011101011110111100110000011100110000011111100111101010011111110011100010010110000001101000000001110011111001110010110011011111101011000000011001101010110110110101110100010100100010111111111101001011011111011110000111111010011011010000110010000100011000010101001001001111111101010101000000100000100110010010000001100000011010111011001011110101000010010100100010111011101111000100101100000011011101111111011001001001000010101110111101110001000000110001100010010101010000111010101111110001110011000000001111101100001111111011111110011000010110111111110000110000000100110100001000100010000010110000101001111111110011101010010100000001111011111111001101010011111101010011000101000011110101110011110110001110000000000000100101010111111000010111111100111001110111010000100011100000111101100111111110101011111111011011011111011110010001100010001010010001100000111011100110101111010001110111111111111111110011111011111110011001100000100001100010101001100000000011101001000011110101100011110000010100001110010010101000010001000100111000000000100000010101101001100000000110011011101111011010001000001100101110001011111101101111101011011110110011110110101110100111110100111101111100111000011010001000011110110111011101011000001000101110100101110111000100011000010101111111001001110010001101100000"
+# D = "00001010000000010110010111011111100010001000100111010000000010011110110101100111111001111101101101"
+# C = AEC.compress(D)
+# print(len(C))
 
 
-# m=MultiBinaryPPM()
-# s,ctx='11101010101001100101011001011111001101110100101110101',''
-# for c in s:
-#   m.update(c, ctx)
-#   ctx+=c
-# print(m.weights)
+# sm = PPMModel(prob)
+# ctx = ''
+# for c in D:
+#   sm.update(c, ctx)
+#   ctx += c
+# print(sm.cdf())
+# print(sm.probability())
+# print(sm.entropy(s), h(s))
 
+# print(PPMModel(symbols).scaled_freq())
+# print('[Base]')
+# BaseFrequencyTable(prob).test_model(False)
+# print('[Simple Adaptive]')
+# SimpleAdaptiveModel(prob).test_model(False)
 
-# data = bin(mbit(100000))[2:]
-# data = generate_data(prob, 100000, shuffle=True)
-# data = "000012344445677789"*5000
-# data += "009937754421110888"*5000
-# data = shuffle_string(data)
-
-# AE
-# AEC = AECompressor(mpmodel)
-# print('AE', len(data))
-# ans_encoded = AEC.compress(data)
-# ans_decoded = AEC.decompress(ans_encoded, len(data))
-# print(len(ans_encoded),
-#       f"[entropy: {AEC.model.entropy(data)} | expected: {AEC.model.entropy(len(data))}]")
-# print(data == ans_decoded)
-# print(AEC.model.probability())
-
-# print('\n', AEC.model.weights)
-# for i in range(len(AEC.model.weights)):
-#   print(i, AEC.model.models[i].probability(data[-6:]))
-
-
-# ANS
-# rANSC = rANSCompressor(bmodel)
-# print('rANS')
-# ans_encoded = rANSC.compress(data)
-# print(len(ans_encoded)*32, rANSC.bmodel.entropy(len(data)))
-# ans_decoded = rANSC.decompress(ans_encoded, len(data))
-# print(ans_decoded, data)
-# print(ans_decoded == data)
+# print('[PPM]')
+# PPMModel(prob,k=1).test_model(False)
+# MultiPPM(prob, models=2).test_model(False)
 
 
 exit()

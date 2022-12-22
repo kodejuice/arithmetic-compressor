@@ -1,7 +1,8 @@
 from misc import *
 
-RATE = 10  # the closer to 0 this is, the faster the probabilities adapts
+RATE = 5
 ADAPT_RATE = 1 - 1 / (1 << RATE)
+# print(ADAPT_RATE)
 
 
 class BaseFrequencyTable:
@@ -20,7 +21,7 @@ class BaseFrequencyTable:
     self.scale_factor = 4096
 
     # private
-    self.__freq = {sym: 0 for sym in self.symbols}
+    self.__freq = {sym: 1 for sym in self.symbols}
     self.__freq_total = 0
     self.__prob = dict(probability)
 
@@ -86,30 +87,35 @@ class SimpleAdaptiveModel(BaseFrequencyTable):
     super().__init__(probability)
     self.name = "Simple adaptive"
 
-    self.__freq = {}
     self.__prob = dict(probability)
+    self.__freq = {}
     self.update_rate = update_rate
+
+  def _adapt(self, prob_object, symbol):
+    for sym, prob in prob_object.items():
+      if sym == symbol:
+        prob_object[sym] = prob * self.update_rate + (1 - self.update_rate)
+      else:
+        prob_object[sym] *= self.update_rate
+      prob_object[sym] = max(prob_object[sym], 1/self.scale_factor)
 
   def update(self, symbol, context=None):
     assert (symbol in self.symbols)
     self.__freq[symbol] = self.__freq.get(symbol, 0) + 1
-    for sym, prob in self.__prob.items():
-      if sym == symbol:
-        self.__prob[sym] = prob * self.update_rate + (1 - self.update_rate)
-      else:
-        self.__prob[sym] *= self.update_rate
+    self._adapt(self.__prob, symbol)
 
   def freq(self, context=None):
     return self.__freq
 
   def probability(self, context=None, return_array=False):
+    # print(self.__prob)
     return self.__prob
 
 
 class PPMModel(SimpleAdaptiveModel):
   """Prediction by partial matching model
-  table -> [context-size][context][probability of symbols]
-  e.g, table[1]['1'] = {'0': 0.5, '1': 0.5}
+  table -> [context-size][context][probability of next symbols]
+  e.g, table[1]['11'] = {'0': 0.2, '1': 0.8}
        table[2]['01'] = {'0': 0.73, '1': 0.27}
   """
 
@@ -161,11 +167,7 @@ class PPMModel(SimpleAdaptiveModel):
           T[sym] = 1 / N
 
       # update probabilities
-      for sym, prob in T.items():
-        if sym == symbol:
-          T[sym] = prob * self.update_rate + (1 - self.update_rate)
-        else:
-          T[sym] *= self.update_rate
+      self._adapt(T, symbol)
 
       if not self.check_lower_models and i == 1:
         break
@@ -227,121 +229,3 @@ class MultiPPM(PPMModel):
             self.models[i].predict(symbol, context)
       combined_probs[symbol] = symbol_prob
     return combined_probs
-
-
-# Binary models
-
-class BaseBinaryModel(BaseFrequencyTable):
-  """Binary Adaptive model
-  """
-
-  def __init__(self, update_rate=RATE):
-    super().__init__({'0': .5, '1': .5})
-
-    self.name = "Base Binary"
-    self.update_rate = update_rate
-    self.prob_1_scaled = self.scale_factor >> 1  # 0.5, range -> [31, 4065]
-
-  def update(self, symbol, context=None):
-    if symbol == '0':
-      self.prob_1_scaled -= self.prob_1_scaled >> self.update_rate
-    else:
-      self.prob_1_scaled += (self.scale_factor -
-                             self.prob_1_scaled) >> self.update_rate
-
-  def probability(self, context=None):
-    p1 = self.prob_1_scaled / self.scale_factor
-    return {'0': 1 - p1, '1': p1}
-
-  def cdf(self, context=None):
-    prob_1_scaled = self.prob_1_scaled
-    if isinstance(context, int):
-      prob_1_scaled = context
-    return {
-        '1': Range(0, prob_1_scaled),
-        '0': Range(prob_1_scaled, self.scale_factor)
-    }
-
-
-class BinaryPPM(BaseBinaryModel):
-  """Prediction by partial matching for binary symbols
-  0 and 1
-  """
-
-  def __init__(self, k=3, check_lower=True, update_rate=RATE):
-    super().__init__()
-    assert (-1 < k)
-    self.name = f"Binary-PPM<{k}>"
-    self.context_size = k
-    self.check_lower = check_lower
-    self.prob_table = {k: {} for k in range(k+1)}
-    self.default_prob = self.prob_1_scaled
-    self.update_rate = update_rate
-
-  def _get_context_prob(self, context=None):
-    """Return scaled probability of '1' from a given context
-    """
-
-    if not context:
-      single = self.prob_table[0]
-      prob_1_scaled = single[''] if len(single) else self.default_prob
-      return prob_1_scaled
-
-    # get last k(context size) symbols from context
-    context = context[(len(context) - self.context_size):]
-    for s in range(len(context), -1, -1):
-      if context in self.prob_table[s]:
-        prob_1_scaled = self.prob_table[s][context]
-        return prob_1_scaled
-      context = context[1:]
-      if not self.check_lower:
-        break
-
-    return self._get_context_prob()
-
-  def update(self, symbol: str, context: str):
-    # get last k(context size) symbols from context
-    context = context[(len(context) - self.context_size):]
-    assert (symbol in self.symbols)  # 0 or 1
-    for i in range(len(context)+1):
-      suffix = context[i:]
-      ln = len(suffix)
-      if suffix not in self.prob_table[ln]:
-        self.prob_table[ln][suffix] = self.default_prob
-
-      prob_1_scaled = self.prob_table[ln][suffix]
-      if symbol == '0':
-        prob_1_scaled -= prob_1_scaled >> self.update_rate
-      else:
-        prob_1_scaled += (self.scale_factor -
-                          prob_1_scaled) >> self.update_rate
-
-      self.prob_table[ln][suffix] = prob_1_scaled
-      if not self.check_lower and i == 1:
-        break
-
-  def probability(self, context=None):
-    prob_1_scaled = self._get_context_prob(context)
-    p1 = prob_1_scaled / self.scale_factor
-    return {'1': p1, '0': 1 - p1}
-
-  def predict(self, symbol, context=None):
-    return self.probability(context)[symbol]
-
-  def cdf(self, context=None):
-    prob_1_scaled = self._get_context_prob(context)
-    return super().cdf(prob_1_scaled)
-
-
-class MultiBinaryPPM(MultiPPM):
-  """Mix multiple Binary PPM models to make prediction.
-  Uses weighted average to combine proabilities
-  """
-
-  def __init__(self, models=6, check_lower=False):
-    assert (models >= 2)
-    super().__init__(['0', '1'], 3, check_lower)
-    self.name = f"Multi-Binary-PPM<0-{models}>"
-    # self.models = [PPMModel(['0','1'], k, check_lower) for k in range(models+1)]
-    self.models = [BinaryPPM(k, check_lower) for k in range(models+1)]
-    self.weights = [1/len(self.models)] * len(self.models)

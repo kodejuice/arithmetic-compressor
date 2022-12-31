@@ -1,3 +1,4 @@
+import random
 from util import *
 
 
@@ -23,41 +24,41 @@ class BaseFrequencyTable:
     self.__freq_total = 0
     self.__prob = dict(probability)
 
-  def update(self, symbol, context=None):
+  def update(self, symbol):
     self.__freq[symbol] = self.__freq.get(symbol, 0) + 1
     self.__freq_total += 1
     self.__prob = {k: f/self.__freq_total for k, f in self.__freq.items()}
 
-  def freq(self, context=None):
+  def freq(self):
     return self.__freq
 
-  def scaled_freq(self, context=None):
-    P = self.probability(context).items()
+  def scaled_freq(self):
+    P = self.probability().items()
     freq = {sym: round(self.scale_factor * prob) for sym, prob in P}
     return freq
 
-  def cdf(self, context=None):
+  def cdf(self):
     """Create a cummulative distribution function from a probability dist.
     """
     cdf = {}
     prev_freq = 0
-    freq = self.scaled_freq(context).items()
+    freq = self.scaled_freq().items()
     for sym, freq in freq:
       cdf[sym] = Range(prev_freq, prev_freq + freq)
       prev_freq += freq
     return cdf
 
-  def probability(self, context=None, return_array=False):
+  def probability(self):
     return self.__prob
 
-  def predict(self, symbol, context=None):
-    return self.probability(context)[symbol]
+  def predict(self, symbol):
+    return self.probability()[symbol]
 
   def entropy(self, N=1):
     return HF(self.freq())
 
   def test_model(self, gen_random=True, N=10000, custom_data=None):
-    """Test efficiency of the adaptive frequency model
+    """Test efficiency of the adaptive model
       to predict symbols
     """
     if custom_data:
@@ -68,13 +69,13 @@ class BaseFrequencyTable:
       symbol_pool = generate_data(self.probability(), N, False)
 
     error = 0
-    context = ""
+    # context = ""
     for i in range(N-1):
-      p = self.probability(context)
+      p = self.probability()
       rand_symbol = symbol_pool[i]
       error += 1 - p[rand_symbol]
-      self.update(rand_symbol, context)
-      context += rand_symbol
+      self.update(rand_symbol)
+      # context += rand_symbol
     print(f"percentage of error({self.name}): {error/N}")
 
 
@@ -96,13 +97,13 @@ class SimpleAdaptiveModel(BaseFrequencyTable):
         prob_object[sym] *= self.update_rate
       prob_object[sym] = max(prob_object[sym], 1/self.scale_factor)
 
-  def update(self, symbol, context=None):
+  def update(self, symbol):
     assert (symbol in self.symbols)
     self.__freq[symbol] = self.__freq.get(symbol, 0) + 1
     self._adapt(self.__prob, symbol)
 
-  def freq(self, context=None):
+  def freq(self):
     return self.__freq
 
-  def probability(self, context=None):
+  def probability(self):
     return self.__prob

@@ -27,8 +27,9 @@ class PPMModel(SimpleAdaptiveModel):
     self.name = f"PPM<{k}>"
     self.context_size = k
     self.check_lower_models = check_lower_models
-    # self.table = {k: {} for k in range(k+1)}
+    self.context = ""
     self.table = [{} for _ in range(k+1)]
+    # self.table = {k: {} for k in range(k+1)}
 
   def get_context_probability(self, context=None):
     """Return probability of a given context
@@ -52,10 +53,10 @@ class PPMModel(SimpleAdaptiveModel):
     # just get the stat with an empty context
     return self.get_context_probability()
 
-  def update(self, symbol: str, context: str):
-    # get last k(context size) symbols from context
-    context = context[(len(context) - self.context_size):]
+  def update(self, symbol: str):
     assert (symbol in self.symbols)
+
+    context = self.context
     for i in range(len(context)+1):
       suffix = context[i:]
       ln = len(suffix)
@@ -74,11 +75,16 @@ class PPMModel(SimpleAdaptiveModel):
       if not self.check_lower_models and i == 1:
         break
 
-  def freq(self, context=None):
-    return self.scaled_freq(context)
+    if self.context_size > 0:
+      self.context += symbol
+    if len(self.context) >= self.context_size:
+      self.context = self.context[-self.context_size:]
 
-  def probability(self, context=None):
-    prob = self.get_context_probability(context)
+  def freq(self):
+    return self.scaled_freq()
+
+  def probability(self):
+    prob = self.get_context_probability(self.context)
     return prob
 
 
@@ -94,35 +100,35 @@ class MultiPPM(PPMModel):
     self.models = [PPMModel(symbols, k, check_lower) for k in range(models+1)]
     self.weights = [1/len(self.models)] * len(self.models)
 
-  def update_weights(self, symbol: str, context: str):
+  def update_weights(self, symbol: str):
     # Update the weights of the models based on their prediction accuracy
     weights = self.weights
     for i, model in enumerate(self.models):
-      weights[i] *= model.predict(symbol, context)
+      weights[i] *= model.predict(symbol)
       weights[i] = max(weights[i], 0.00001)  # Additive smoothing
     # Normalize the weights so they sum to 1
     total_weights = sum(weights)
     weights = [weight / total_weights for weight in weights]
     self.weights = weights
 
-  def update(self, symbol: str, context: str):
+  def update(self, symbol: str):
     for model in self.models:
-      model.update(symbol, context)
+      model.update(symbol)
 
     # update the weights of the models
-    self.update_weights(symbol, context)
+    self.update_weights(symbol)
 
-  def freq(self, context=None):
+  def freq(self):
     # all models should have the same frequency
-    return self.models[-1].freq(context)
+    return self.models[-1].freq()
 
-  def probability(self, context=None):
+  def probability(self):
     # Combine the probabilities using a weighted average
     combined_probs = {}
     for symbol in self.symbols:
       symbol_prob = 0
       for i in range(len(self.models)):
         symbol_prob += self.weights[i] * \
-            self.models[i].predict(symbol, context)
+            self.models[i].predict(symbol)
       combined_probs[symbol] = symbol_prob
     return combined_probs

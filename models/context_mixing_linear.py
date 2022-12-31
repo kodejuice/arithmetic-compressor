@@ -1,6 +1,6 @@
 import math
 from util import *
-from models.base_adaptive_model import BaseFrequencyTable, SimpleAdaptiveModel
+from models.base_adaptive_model import BaseFrequencyTable
 
 # Adapted from the PAQ6 compressor
 # https://cs.fit.edu/~mmahoney/compression/paq6.cpp
@@ -31,7 +31,6 @@ https://en.wikipedia.org/wiki/PAQ#Algorithm
 
 """
 TODO:
-- Add get_counts() to BaseFrequencyTable
 - Test compression with AE
 - Test with other models
 - Implement MatchModel
@@ -161,7 +160,7 @@ class ContextMix_Linear(Base):
           n0i, n1i = self.contexts[c][j].get_prob()
           ni = n0i + n1i
           error = int(bit) - P1
-          self.weights[c][j] += (((S*n1i) - (s1*ni)) / (s0 * s1)) * error
+          self.weights[c][j] += abs((((S*n1i) - (s1*ni)) / (s0 * s1)) * error)
 
   def update(self, bit):
     # update models
@@ -199,10 +198,10 @@ class ContextMix_Linear(Base):
     """Create a cummulative distribution function from the probability of 0 and 1.
     """
     p = self.probability()
-    p0 = round(PSCALE * p['0'])
+    p1 = round(PSCALE * p['1'])
     return {
-        '0': Range(0, p0),
-        '1': Range(p0, PSCALE)
+        '1': Range(0, p1),
+        '0': Range(p1, PSCALE)
     }
 
   def entropy(self):

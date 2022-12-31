@@ -54,7 +54,7 @@ class BaseFrequencyTable:
   def predict(self, symbol):
     return self.probability()[symbol]
 
-  def entropy(self, N=1):
+  def entropy(self):
     return HF(self.freq())
 
   def test_model(self, gen_random=True, N=10000, custom_data=None):

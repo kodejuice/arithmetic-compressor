@@ -78,6 +78,14 @@ class BaseFrequencyTable:
       # context += rand_symbol
     print(f"percentage of error({self.name}): {error/N}")
 
+  def get_counts(self):
+    """Called by the Context Mixing algorithm
+    when this class or its children are included as
+    models to the context mixing model
+    """
+    freq = self.scaled_freq()
+    return [Counter([freq['0'], freq['1']], True)]
+
 
 class SimpleAdaptiveModel(BaseFrequencyTable):
   def __init__(self, probability: dict, update_rate=ADAPT_RATE):

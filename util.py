@@ -69,7 +69,7 @@ def h(S: str):
 
 # generate string, given count and probability
 def generate_data(probs, N=10, shuffle=False):
-  assert (sum(probs.values()) <= 1)
+  assert (sum(probs.values()) < 2)
   s = ""
   maxProb, maxS = None, None
   for sym, prob in probs.items():

@@ -31,50 +31,13 @@ https://en.wikipedia.org/wiki/PAQ#Algorithm
 
 """
 TODO:
-- Improve speed of OrderN model
 - Add get_counts() to BaseFrequencyTable
+- Test compression with AE
 - Test with other models
+- Implement MatchModel
 """
 
 PSCALE = 4096
-
-
-class Counter:
-  """A Counter represents a pair (n0, n1) of counts of 0 and 1 bits
-  in a context.
-  """
-
-  def __init__(self, c=None):
-    self.c = c or [0, 0]
-    assert(len(self.c) == 2)
-
-  def __repr__(self) -> str:
-    return f"{self.get_context_counts()}"
-
-  def add(self, bit):
-    if self.c[bit] < 255:
-      self.c[bit] += 1
-    # update oppsite bit
-    ob = self.c[1-bit]
-    if ob > 25:
-      self.c[1-bit] = math.floor(math.sqrt(ob) + 6)
-    elif ob > 1:
-      self.c[1-bit] = ob >> 1
-
-  def get_prob(self):
-    c = self.c
-    # compute relative probabilities (n0, n1)
-    if c[1] >= c[0]:
-      if c[0] == 0:
-        n = (0, 4*c[1])
-      else:
-        n = (1, c[1]//c[0])
-    else:
-      if c[1] == 0:
-        n = (4*c[0], 0)
-      else:
-        n = (c[0]//c[1], 1)
-    return n
 
 
 class Base:
@@ -133,16 +96,12 @@ class CharModel(Base):
       self.counters[0].c = [0, 1] if bit else [1, 0]
 
 
-# m = CharModel(10)
-# # D = "10101010010101001010101010010101010101010010101010001001010111111111111100101111"
-# D = generate_data({'0': 0.5, '1': 0.5}, 8*50+3, True)
-# print(D[-8:])
-# for c in D:
-#   m.update(c)
-# print('Char  ', m.get_counts())
-
-
 class MatchModel(DefaultModel):
+  """A MatchModel looks for a match of length n >= 8 bytes between
+  the current context and previous input, and predicts the next bit
+  in the previous context with weight n.  If the next bit is 1, then
+  (n0[0], n1[0]) is assigned (0, n), else (n, 0).
+  """
   pass
 
 
@@ -195,7 +154,7 @@ class ContextMix_Linear(Base):
         s1 += context_weight * n1i
 
     if s0 > 0 and s1 > 0:
-      S = s0+s1
+      S = s0 + s1
       P1 = s1 / S
       for c in range(len(self.models)):
         for j in range(len(self.contexts[c])):
@@ -204,7 +163,7 @@ class ContextMix_Linear(Base):
           error = int(bit) - P1
           self.weights[c][j] += (((S*n1i) - (s1*ni)) / (s0 * s1)) * error
 
-  def update(self, bit, context=None):
+  def update(self, bit):
     # update models
     for model in self.models:
       model.update(bit)
@@ -212,7 +171,7 @@ class ContextMix_Linear(Base):
     # update the weights of the models
     self.update_weights(bit)
 
-  def probability(self, context=None):
+  def probability(self):
     """
     Linear Evidence Mixing
     Let n0i and n1i be the counts of 0 and 1 bits for the i'th model.
@@ -257,5 +216,3 @@ class ContextMix_Linear(Base):
     self.symbols = ['0', '1']
     self.name = "Context Mixing<Linear>"
     BaseFrequencyTable.test_model(self, gen_random, N, custom_data)
-
-# ε

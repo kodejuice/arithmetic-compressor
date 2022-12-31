@@ -100,3 +100,48 @@ class Range:
 
   def __repr__(self):
     return f"[{self.low}, {self.high})"
+
+
+class Counter:
+  """A Counter represents a pair (n0, n1) of counts of 0 and 1 bits
+  in a context.
+
+  This is used by the models to represent relative proabilities
+  of contexts
+  """
+
+  def __init__(self, c=None, get_counts=False):
+    self.c = c or [0, 0]
+    assert (len(self.c) == 2)
+    self.get_counts = get_counts
+
+  def __repr__(self) -> str:
+    return f"{self.get_prob()}"
+
+  def add(self, bit):
+    if self.c[bit] < 255:
+      self.c[bit] += 1
+    # update oppsite bit
+    ob = self.c[1-bit]
+    if ob > 25:
+      self.c[1-bit] = math.floor(math.sqrt(ob) + 6)
+    elif ob > 1:
+      self.c[1-bit] = ob >> 1
+
+  def get_prob(self):
+    c = self.c
+    if self.get_counts:
+      return c
+
+    # compute relative probabilities (n0, n1)
+    if c[1] >= c[0]:
+      if c[0] == 0:
+        n = (0, 4*c[1])
+      else:
+        n = (1, c[1]//c[0])
+    else:
+      if c[1] == 0:
+        n = (4*c[0], 0)
+      else:
+        n = (c[0]//c[1], 1)
+    return n

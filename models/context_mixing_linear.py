@@ -31,8 +31,6 @@ https://en.wikipedia.org/wiki/PAQ#Algorithm
 
 """
 TODO:
-- Test compression with AE
-- Test with other models
 - Implement MatchModel
 """
 

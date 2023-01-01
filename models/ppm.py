@@ -77,7 +77,7 @@ class PPMModel(SimpleAdaptiveModel):
 
     if self.context_size > 0:
       self.context += symbol
-    if len(self.context) >= self.context_size:
+    if len(self.context) > self.context_size:
       self.context = self.context[-self.context_size:]
 
   def freq(self):

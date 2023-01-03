@@ -1,4 +1,5 @@
 import math
+from collections import OrderedDict
 from util import *
 from models.base_adaptive_model import BaseFrequencyTable
 
@@ -31,7 +32,9 @@ https://en.wikipedia.org/wiki/PAQ#Algorithm
 
 """
 TODO:
-- Implement MatchModel
+- Implement SSE
+- Improve PPM speed
+- Start working on block mapping
 """
 
 PSCALE = 4096
@@ -40,15 +43,15 @@ PSCALE = 4096
 class Base:
   def __init__(self):
     self.data = []
-    self.current_byte = []
+    self.current_byte_len = 0
 
   def update(self, bit):
     bit = int(bit)
     assert bit == 0 or bit == 1
-    if len(self.current_byte) == 8:
-      self.data += self.current_byte
-      self.current_byte = []
-    self.current_byte += [bit]
+    if self.current_byte_len == 8:
+      self.current_byte_len = 0
+    self.data += [bit]
+    self.current_byte_len += 1
 
 
 """SUBMODELS"""
@@ -63,7 +66,7 @@ class DefaultModel(Base):
     self.n = (1, 1)
 
   def get_counts(self):
-    return [self.n]
+    return [Counter(self.n)]
 
 
 class CharModel(Base):
@@ -87,20 +90,68 @@ class CharModel(Base):
 
     super().update(bit)
 
-    if len(self.current_byte) == 1:  # start of a new byte
+    if self.current_byte_len == 1:  # start of a new byte
       for i in range(self.N-1, 0, -1):
         self.counters[i].c = self.counters[i-1].c
       self.counters[0].c = [0, 1] if bit else [1, 0]
 
 
-class MatchModel(DefaultModel):
+class MatchModel(Base):
   """A MatchModel looks for a match of length n >= 8 bytes between
   the current context and previous input, and predicts the next bit
-  in the previous context with weight n.  If the next bit is 1, then
-  (n0[0], n1[0]) is assigned (0, n), else (n, 0).
+  in the previous context with weight n. the output is (n0,n1) = (w,0) or (0,w)
+  (depending on the next bit) with a weight of w = length^2 / 4 (maximum 511),
+  depending on the length of the context in bytes. 
   """
-  pass
 
+  def __init__(self, N, limit=500):
+    super().__init__()
+    self.N = N
+    self.hash = OrderedDict()
+    self.limit = limit
+    self.window = ""
+    self.counter = Counter()
+
+  def update(self, bit):
+    if len(self.window) == 8*self.N:
+      if len(self.hash) == self.limit:
+        self.hash.popitem(last=False)
+      self.hash[self.window] = len(self.data) - 1
+      self.window = self.window[1:]
+    super().update(bit)
+    self.window += str(bit)
+
+    if self.current_byte_len == 1:  # Start of new byte
+      if self.window in self.hash:
+        end = self.hash[self.window]
+        p = len(self.data) - 1
+        begin = end
+        while begin > 0 and p > 0 and begin != p+1 and self.data[begin] == self.data[p]:
+          begin -= 1
+          p -= 1
+
+        wt = end - begin
+        wt = min(wt*wt/4, 511)
+
+        # Predict the bit found in the matching contexts
+        y = int(self.data[end + 1])
+        if y:
+          self.counter.c = [0, wt]
+        else:
+          self.counter.c = [wt, 0]
+        return
+    self.counter.c = [0, 0]
+
+  def get_counts(self):
+    return [self.counter]
+
+
+# D = "000010100000000101100101110111111000100010001001110100000000100111101101011001111110011111011011011000000101000111101100101111010000100001001100111101100011011101011110111100110000011100110000011111100111101010011111110011100010010110000001101000000001110011111001110010110011011111101011000000011001101010110110110101110100010100100010111111111101001011011111011110000111111010011011010000110010000100011000010101001001001111111101010101000000100000100110010010000001100000011010111011001011110101000010010100100010111011101111000100101100000011011101111111011001001001000010101110111101110001000000110001100010010101010000111010101111110001110011000000001111101100001111111011111110011000010110111111110000110000000100110100001000100010000010110000101001111111110011101010010100000001111011111111001101010011111101010011000101000011110101110011110110001110000000000000100101010111111000010111111100111001110111010000100011100000111101100111111110101011111111011011011111011110010001100010001010010001100000111011100110101111010001110111111111111111110011111011111110011001100000100001100010101001100000000011101001000011110101100011110000010100001110010010101000010001000100111000000000100000010101101001100000000110011011101111011010001000001100101110001011111101101111101011011110110011110110101110100111110100111101111100111000011010001000011110110111011101011000001000101110100101110111000100011000010101111111001001110010001101100000"
+# M = MatchModel(1)
+# for c in D:
+#   M.update(c)
+
+# print(M.hash)
 
 """MIXER"""
 
@@ -197,14 +248,11 @@ class ContextMix_Linear(Base):
     """
     p = self.probability()
     p1 = round(PSCALE * p['1'])
-    return {
-        '1': Range(0, p1),
-        '0': Range(p1, PSCALE)
-    }
+    return {'1': Range(0, p1), '0': Range(p1, PSCALE)}
 
   def entropy(self):
     m = self.models[-1]  # all models should have same data
-    return h(m.data + m.current_byte)
+    return h(m.data)
 
   def test_model(self, gen_random=True, N=10000, custom_data=None):
     """Test efficiency of the adaptive model

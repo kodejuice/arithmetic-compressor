@@ -9,6 +9,9 @@ PPM models use a set of previous symbols in the uncompressed symbol stream to pr
 https://en.wikipedia.org/wiki/Prediction_by_partial_matching
 """
 
+U = 10
+ADAPT_RATE = 1 - 1 / (1 << U)
+
 
 class PPMModel(SimpleAdaptiveModel):
   """Prediction by partial matching model
@@ -29,7 +32,6 @@ class PPMModel(SimpleAdaptiveModel):
     self.check_lower_models = check_lower_models
     self.context = ""
     self.table = [{} for _ in range(k+1)]
-    # self.table = {k: {} for k in range(k+1)}
 
   def get_context_probability(self, context=None):
     """Return probability of a given context
@@ -41,8 +43,7 @@ class PPMModel(SimpleAdaptiveModel):
         return {sym: 1/len_sym for sym in self.symbols}
       return prob
 
-    # get last k(context size) symbols from context
-    context = context[(len(context) - self.context_size):]
+    context = context[-self.context_size:]
     for s in range(len(context), -1, -1):
       if context in self.table[s]:
         return self.table[s][context]
@@ -50,11 +51,13 @@ class PPMModel(SimpleAdaptiveModel):
       if not self.check_lower_models:
         break
 
-    # just get the stat with an empty context
+    # just get the prob with an empty context
     return self.get_context_probability()
 
   def update(self, symbol: str):
     assert (symbol in self.symbols)
+    if len(self.context) > self.context_size:
+      self.context = self.context[-self.context_size:]
 
     context = self.context
     for i in range(len(context)+1):
@@ -77,8 +80,6 @@ class PPMModel(SimpleAdaptiveModel):
 
     if self.context_size > 0:
       self.context += symbol
-    if len(self.context) > self.context_size:
-      self.context = self.context[-self.context_size:]
 
   def freq(self):
     return self.scaled_freq()
@@ -93,11 +94,11 @@ class MultiPPM(PPMModel):
   Uses weighted averaging to combine proabilities
   """
 
-  def __init__(self, symbols: dict, models=6, check_lower=False):
+  def __init__(self, symbols: dict, models=6):
     super().__init__(symbols)
     assert (models > 1)
     self.name = f"Multi-PPM<0-{models}>"
-    self.models = [PPMModel(symbols, k, check_lower) for k in range(models+1)]
+    self.models = [PPMModel(symbols, k, False) for k in range(models+1)]
     self.weights = [1/len(self.models)] * len(self.models)
 
   def update_weights(self, symbol: str):

@@ -18,7 +18,7 @@ class BaseBinaryModel(BaseFrequencyTable):
   Like the SimpleAdaptiveModel, but for binary symbols
   """
 
-  def __init__(self, update_rate=ADAPT_RATE):
+  def __init__(self, update_rate=UPDATE_RATE):
     super().__init__({'0': .5, '1': .5})
 
     self.name = "Base Binary"
@@ -26,6 +26,7 @@ class BaseBinaryModel(BaseFrequencyTable):
     self.prob_1_scaled = self.scale_factor >> 1  # P(1) = 0.5
 
   def update(self, symbol):
+    prob_1 = self.prob_1_scaled
     if symbol == '0':
       prob_1 -= self.prob_1_scaled >> self.update_rate
     else:

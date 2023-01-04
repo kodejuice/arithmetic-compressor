@@ -2,7 +2,7 @@ import random
 from util import *
 
 
-U = 5
+U = 10
 ADAPT_RATE = 1 - 1 / (1 << U)
 
 

@@ -23,6 +23,7 @@ class BaseBinaryModel(BaseFrequencyTable):
 
     self.name = "Base Binary"
     self.update_rate = update_rate
+    self.scale_factor = 4096
     self.prob_1_scaled = self.scale_factor >> 1  # P(1) = 0.5
 
   def update(self, symbol):

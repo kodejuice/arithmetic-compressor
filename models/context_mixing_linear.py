@@ -5,7 +5,7 @@ from models.base_adaptive_model import BaseFrequencyTable
 
 # Adapted from the PAQ6 compressor
 # https://cs.fit.edu/~mmahoney/compression/paq6.cpp
-# Only implements 3 submodels (Default, CharModel, MatchModel)
+# Only 3 submodels implemented (Default, CharModel, MatchModel)
 
 """
 Context mixing (Linear Evidence Mixing)
@@ -234,14 +234,14 @@ class ContextMix_Linear(Base):
         s1 += context_weight * n1i
     sum = s0 + s1
     p1 = s1 / sum
-    return {'1': p1, '0': 1-p1}
+    return {1: p1, 0: 1-p1}
 
   def cdf(self):
     """Create a cummulative distribution function from the probability of 0 and 1.
     """
     p = self.probability()
-    p1 = round(PSCALE * p['1'])
-    return {'1': Range(0, p1), '0': Range(p1, PSCALE)}
+    p1 = round(PSCALE * p[1])
+    return {1: Range(0, p1), 0: Range(p1, PSCALE)}
 
   def entropy(self):
     m = self.models[-1]  # all models should have same data
@@ -251,6 +251,6 @@ class ContextMix_Linear(Base):
     """Test efficiency of the adaptive model
       to predict symbols
     """
-    self.symbols = ['0', '1']
+    self.symbols = [0, 1]
     self.name = "Context Mixing<Linear>"
     BaseFrequencyTable.test_model(self, gen_random, N, custom_data)

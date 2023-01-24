@@ -1,16 +1,15 @@
 import copy
 import arithmetic_coding as AE
 
-# Arithmetic Encoder
+# Compress using arithmetic encoding
 
 
 class AECompressor:
   def __init__(self, model, adapt=True) -> None:
     self.adapt = adapt
     # clone model, so we dont mutate original
-    self.model = model
-    # self.model = copy.deepcopy(model)
-    # self.__model = copy.deepcopy(model)  # for decoding
+    self.model = copy.deepcopy(model)
+    self.__model = copy.deepcopy(model)  # for decoding
 
   def compress(self, data):
     encoder = AE.Encoder()

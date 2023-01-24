@@ -8,6 +8,8 @@ ADAPT_RATE = 1 - 1 / (1 << U)
 
 class BaseFrequencyTable:
   """Base frequency table class
+  Increases frequency count and updates probability whenever
+  we come across a symbol.
   """
 
   def __init__(self, probability: dict):
@@ -38,7 +40,7 @@ class BaseFrequencyTable:
     return freq
 
   def cdf(self):
-    """Create a cummulative distribution function from a probability dist.
+    """Create a cummulative distribution function from a frequency dist.
     """
     cdf = {}
     prev_freq = 0
@@ -58,8 +60,7 @@ class BaseFrequencyTable:
     return HF(self.freq())
 
   def test_model(self, gen_random=True, N=10000, custom_data=None):
-    """Test efficiency of the adaptive model
-      to predict symbols
+    """Tests efficiency of the adaptive model to predict symbols
     """
     if custom_data:
       symbol_pool = list(custom_data)
@@ -79,15 +80,23 @@ class BaseFrequencyTable:
     print(f"percentage of error({self.name}): {error/N}")
 
   def get_counts(self):
-    """Called by the Context Mixing algorithm
-    when this class or its children are included as
+    """Called by the Context Mixing algorithm when
+    this class or any of its children are included as
     models to the context mixing model
     """
+    # context mixing only allows binary symbols
+    assert set(self.symbols) == set([0, 1])
     freq = self.scaled_freq()
-    return [Counter([freq['0'], freq['1']], True)]
+    return [Counter([freq[0], freq[1]], True)]
 
 
 class SimpleAdaptiveModel(BaseFrequencyTable):
+  """ A better approach to handle changing data statistics is to gradually "forget"
+  old statistics, resulting in models that respond quickly to changed input
+  characteristics, making it more efficient in practice.
+  The canonical "leaking" adaptive binary model is an exponential moving average.
+  """
+
   def __init__(self, probability: dict, update_rate=ADAPT_RATE):
     assert (0 <= update_rate <= 1)
     super().__init__(probability)
@@ -98,6 +107,7 @@ class SimpleAdaptiveModel(BaseFrequencyTable):
     self.update_rate = update_rate
 
   def _adapt(self, prob_object, symbol):
+    '''Exponential moving average'''
     for sym, prob in prob_object.items():
       if sym == symbol:
         prob_object[sym] = prob * self.update_rate + (1 - self.update_rate)

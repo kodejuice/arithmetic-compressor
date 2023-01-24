@@ -5,6 +5,7 @@ from models.base_adaptive_model import BaseFrequencyTable
 
 # Adapted from the PAQ6 compressor
 # https://cs.fit.edu/~mmahoney/compression/paq6.cpp
+# Only implements 3 submodels (Default, CharModel, MatchModel)
 
 """
 Context mixing (Linear Evidence Mixing)
@@ -29,11 +30,6 @@ https://mattmahoney.net/dc/dce.html#Section_43
 https://en.wikipedia.org/wiki/PAQ#Algorithm
 """
 
-
-"""
-TODO:
-- Start working on block mapping
-"""
 
 PSCALE = 4096
 

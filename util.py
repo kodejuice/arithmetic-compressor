@@ -2,11 +2,6 @@ import math
 import random
 
 
-# return randon m-bit number
-def mbit(m):
-  return random.randint(2**(m - 1), 2**m - 1)
-
-
 def H(X, N: str | list | int = 1):
   """Compute entropy from two input types
 

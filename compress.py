@@ -28,7 +28,7 @@ class AECompressor:
     return encoder.get_encoded()
 
   def decompress(self, encoded, length_encoded):
-    decoded = ""
+    decoded = []
     model = self.__model
     decoder = AE.Decoder(encoded)
     for _ in range(length_encoded):
@@ -42,5 +42,5 @@ class AECompressor:
         # update model
         model.update(symbol)
 
-      decoded += symbol
+      decoded += [symbol]
     return decoded

@@ -107,7 +107,7 @@ class BinaryPPM(BaseBinaryModel):
         break
 
     if self.context_size > 0:
-      self.context += symbol
+      self.context += str(symbol)
 
   def probability(self):
     prob_1_scaled = self._get_context_prob(self.context)
@@ -147,7 +147,7 @@ class OrderN_PPM(BinaryPPM):
     if len(self.context) > self.context_size:
       self.context = self.context[-self.context_size:]
     elif len(self.context) < self.context_size:
-      self.context += symbol
+      self.context += str(symbol)
       return
 
     context = self.context
@@ -155,7 +155,7 @@ class OrderN_PPM(BinaryPPM):
       self.prob_table[context] = self.default_prob
 
     prob_1_scaled = self.prob_table[context]
-    if symbol == '0':
+    if str(symbol) == '0':
       prob_1_scaled -= prob_1_scaled >> UPDATE_RATE
     else:
       prob_1_scaled += (self.scale_factor - prob_1_scaled) >> UPDATE_RATE
@@ -164,7 +164,7 @@ class OrderN_PPM(BinaryPPM):
 
     # add symbol to context
     if self.context_size > 0:
-      self.context += symbol
+      self.context += str(symbol)
 
 
 class MultiBinaryPPM(MultiPPM):

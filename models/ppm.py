@@ -25,7 +25,7 @@ class PPMModel(SimpleAdaptiveModel):
   """
 
   def __init__(self, symbols: dict, k=3, check_lower_models=True, update_rate=ADAPT_RATE):
-    super().__init__({sym: -1 for sym in symbols}, update_rate)
+    super().__init__({sym: 0 for sym in symbols}, update_rate)
     assert (-1 < k)
     self.name = f"PPM<{k}>"
     self.context_size = k
@@ -79,7 +79,7 @@ class PPMModel(SimpleAdaptiveModel):
         break
 
     if self.context_size > 0:
-      self.context += symbol
+      self.context += str(symbol)
 
   def freq(self):
     return self.scaled_freq()

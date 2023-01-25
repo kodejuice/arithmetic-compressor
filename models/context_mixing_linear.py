@@ -234,6 +234,7 @@ class ContextMix_Linear(Base):
         s1 += context_weight * n1i
     sum = s0 + s1
     p1 = s1 / sum
+    p1 = max(p1, 0.001)
     return {1: p1, 0: 1-p1}
 
   def cdf(self):

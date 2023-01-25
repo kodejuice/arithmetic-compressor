@@ -7,15 +7,6 @@ def mbit(m):
   return random.randint(2**(m - 1), 2**m - 1)
 
 
-# partition string into grams of length n
-def grams(s, n=1):
-  r = []
-  while s:
-    r += [s[:n]]
-    s = s[n:]
-  return r
-
-
 def H(X, N: str | list | int = 1):
   """Compute entropy from two input types
 
@@ -54,7 +45,7 @@ def HF(freq_table: dict):
 
 
 def h(S: str):
-  """Compute entropy from given string
+  """Compute information content of a given string
 
   Args:
       S (str): _description_
@@ -63,35 +54,19 @@ def h(S: str):
   for c in S:
     freq[c] = freq.get(c, 0) + 1
   X = {symbol: count/N for symbol, count in freq.items()}
-  # actual information content
   return H(X, S)
 
 
-# generate string, given count and probability
+# generate data, given count and probability of symbols
 def generate_data(probs, N=10, shuffle=False):
-  assert (sum(probs.values()) < 2)
-  s = ""
-  maxProb, maxS = None, None
+  prob_sum = sum(probs.values())
+  assert (prob_sum < 2)
+  data = []
   for sym, prob in probs.items():
-    if not maxProb:
-      maxProb, maxS = prob, sym
-    elif prob > maxProb:
-      maxProb, maxS = prob, sym
-    s += sym * int(N * prob)
-  if len(s) < N:
-    r = N - len(s)
-    s += maxS * r
+    data += [sym] * int(N * prob)
   if shuffle:
-    s = shuffle_string(s)
-  sym_len = len(list(probs.keys())[0])
-  return grams(s, sym_len)
-
-
-# shuffle a string
-def shuffle_string(str):
-  arr = [c for c in str]
-  random.shuffle(arr)
-  return "".join(arr)
+    random.shuffle(data)
+  return data
 
 
 class Range:
@@ -107,7 +82,7 @@ class Counter:
   in a context.
 
   This is used by the models to represent relative proabilities
-  of contexts
+  of contexts in the Context Mixing model
   """
 
   def __init__(self, c=None, get_counts=False):

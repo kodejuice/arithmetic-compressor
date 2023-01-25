@@ -14,16 +14,15 @@ UPDATE_RATE = 9
 
 
 class BaseBinaryModel(BaseFrequencyTable):
-  """Binary Adaptive model
-  Like the SimpleAdaptiveModel, but for binary symbols
+  """A Binary Adaptive Model, similar to the SimpleAdaptiveModel,
+  but specifically designed for binary symbols (0 and 1).
   """
 
   def __init__(self, update_rate=UPDATE_RATE):
-    super().__init__({'0': .5, '1': .5})
+    super().__init__({0: .5, 1: .5})
 
     self.name = "Base Binary"
     self.update_rate = update_rate
-    self.scale_factor = 4096
     self.prob_1_scaled = self.scale_factor >> 1  # P(1) = 0.5
 
   def update(self, symbol):
@@ -36,15 +35,15 @@ class BaseBinaryModel(BaseFrequencyTable):
 
   def probability(self):
     p1 = self.prob_1_scaled / self.scale_factor
-    return {'0': 1 - p1, '1': p1}
+    return {0: 1 - p1, 1: p1}
 
   def cdf(self, context=None):
     prob_1_scaled = self.prob_1_scaled
     if isinstance(context, int):
       prob_1_scaled = context
     return {
-        '1': Range(0, prob_1_scaled),
-        '0': Range(prob_1_scaled, self.scale_factor)
+        1: Range(0, prob_1_scaled),
+        0: Range(prob_1_scaled, self.scale_factor)
     }
 
 
@@ -112,7 +111,7 @@ class BinaryPPM(BaseBinaryModel):
   def probability(self):
     prob_1_scaled = self._get_context_prob(self.context)
     p1 = prob_1_scaled / self.scale_factor
-    return {'1': p1, '0': 1 - p1}
+    return {1: p1, 0: 1 - p1}
 
   def predict(self, symbol):
     return self.probability()[symbol]
@@ -123,8 +122,8 @@ class BinaryPPM(BaseBinaryModel):
 
 
 class OrderN_PPM(BinaryPPM):
-  """Prediction by partial matching for binary symbols, 0 and 1
-  This variant doesn't do a loop to check lower context sizes (< k)
+  """Prediction by partial matching for binary symbols 0 and 1,
+  without the need for a loop to check lower context sizes (< k).
   """
 
   def __init__(self, k=3):
@@ -169,12 +168,12 @@ class OrderN_PPM(BinaryPPM):
 
 class MultiBinaryPPM(MultiPPM):
   """Mix multiple Binary PPM models to make prediction.
-  Uses weighted average to combine proabilities
+  Extends MultiPPM class which uses weighted average to combine proabilities
   """
 
   def __init__(self, models=6):
     assert (models >= 2)
-    super().__init__(['0', '1'], 3)
+    super().__init__([0, 1], 3)
     self.name = f"Multi-Binary-PPM<0-{models}>"
     self.models = [OrderN_PPM(k) for k in range(models+1)]
     # self.models = [BinaryPPM(k, False) for k in range(models+1)] # little bit slower

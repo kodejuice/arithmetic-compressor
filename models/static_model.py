@@ -1,3 +1,4 @@
+from models.base_adaptive_model import BaseFrequencyTable
 from util import *
 
 SCALE_FACTOR = 4096
@@ -18,14 +19,14 @@ class StaticModel:
     cdf = {}
     prev_freq = 0
     self.freq = freq = {sym: round(SCALE_FACTOR * prob)
-                        for sym, prob in probability}
-    for sym, freq in freq:
+                        for sym, prob in probability.items()}
+    for sym, freq in freq.items():
       cdf[sym] = Range(prev_freq, prev_freq + freq)
       prev_freq += freq
-    self.cdf = cdf
+    self.cdf_object = cdf
 
   def cdf(self):
-    return self.cdf
+    return self.cdf_object
 
   def probability(self):
     return self.__prob
@@ -36,3 +37,7 @@ class StaticModel:
 
   def update(self, symbol):
     pass
+
+  def test_model(self, gen_random=True, N=10000, custom_data=None):
+    self.name = "Static Model"
+    BaseFrequencyTable.test_model(self, gen_random, N, custom_data)

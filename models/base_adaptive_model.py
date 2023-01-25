@@ -70,13 +70,12 @@ class BaseFrequencyTable:
       symbol_pool = generate_data(self.probability(), N, False)
 
     error = 0
-    # context = ""
-    for i in range(N-1):
+    N = len(symbol_pool)
+    for i in range(N):
       p = self.probability()
-      rand_symbol = symbol_pool[i]
-      error += 1 - p[rand_symbol]
-      self.update(rand_symbol)
-      # context += rand_symbol
+      symbol = symbol_pool[i]
+      error += 1 - p[symbol]
+      self.update(symbol)
     print(f"percentage of error({self.name}): {error/N}")
 
   def get_counts(self):

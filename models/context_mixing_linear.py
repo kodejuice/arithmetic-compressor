@@ -1,6 +1,5 @@
-import math
-from collections import OrderedDict
 from util import *
+from collections import OrderedDict
 from models.base_adaptive_model import BaseFrequencyTable
 
 # Adapted from the PAQ6 compressor
@@ -16,7 +15,7 @@ prediction is computed using a weighted combination of probability estimates fro
 number of models conditioned on different contexts.
 Unlike PPM, a context doesn't need to be contiguous.
 
-A probability is expressed as a count of zeros and ones. Each model maps a set of distinct
+In linear mixing a probability is expressed as a count of zeros and ones. Each model maps a set of distinct
 contexts to a pair of counts, n0, a count of zero bits, and n1, a count of 1 bits.
 In order to favor recent history, half of the count over 2 is discarded when the opposite
 bit is observed.
@@ -26,8 +25,9 @@ then the counts are updated to (7, 4).
 Probabilities are combined by weighted addition of the counts. Weights are adjusted in the
 direction that minimizes coding cost in weight space.
 
-https://mattmahoney.net/dc/dce.html#Section_43
+http://mattmahoney.net/dc/dce.html#Section_43
 https://en.wikipedia.org/wiki/PAQ#Algorithm
+en.wikipedia.org/wiki/Context_mixing#Linear_Mixing
 """
 
 
@@ -98,17 +98,17 @@ class MatchModel(Base):
   depending on the length of the context in bytes. 
   """
 
-  def __init__(self, N, limit=500):
+  def __init__(self, N, max_hash_size=500):
     super().__init__()
     self.N = N  # no of bytes to match
     self.window = ""
-    self.limit = limit
+    self.max_hash_size = max_hash_size
     self.counter = Counter()
     self.hash = OrderedDict()
 
   def update(self, bit):
     if len(self.window) == 8*self.N:
-      if len(self.hash) == self.limit:
+      if len(self.hash) == self.max_hash_size:
         self.hash.popitem(last=False)
       self.hash[self.window] = len(self.data) - 1
       self.window = self.window[1:]
@@ -164,7 +164,6 @@ class ContextMix_Linear(Base):
 
   def __init__(self, models=None) -> None:
     super().__init__()
-    self.custom_models = models != None
     self.models = models or [
         # DefaultModel(),
 
@@ -244,14 +243,7 @@ class ContextMix_Linear(Base):
     p1 = round(PSCALE * p[1])
     return {1: Range(0, p1), 0: Range(p1, PSCALE)}
 
-  def entropy(self):
-    m = self.models[-1]  # all models should have same data
-    return h(m.data)
-
   def test_model(self, gen_random=True, N=10000, custom_data=None):
-    """Test efficiency of the adaptive model
-      to predict symbols
-    """
     self.symbols = [0, 1]
     self.name = "Context Mixing<Linear>"
     BaseFrequencyTable.test_model(self, gen_random, N, custom_data)

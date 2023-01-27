@@ -24,8 +24,8 @@ class PPMModel(SimpleAdaptiveModel):
        table[k][...] = {...}
   """
 
-  def __init__(self, symbols: dict, k=3, check_lower_models=True, update_rate=ADAPT_RATE):
-    super().__init__({sym: 0 for sym in symbols}, update_rate)
+  def __init__(self, symbols: dict, k=3, check_lower_models=True):
+    super().__init__({sym: 0 for sym in symbols}, ADAPT_RATE)
     assert (-1 < k)
     self.name = f"PPM<{k}>"
     self.context_size = k

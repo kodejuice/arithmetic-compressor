@@ -263,7 +263,7 @@ class ContextMix_Logistic(Base):
   and w_i is the i'th weight.
   """
 
-  def __init__(self, learning_rate=0.0000001):
+  def __init__(self, learning_rate=0.1):
     super().__init__()
     self.models = [
         RunMap(),

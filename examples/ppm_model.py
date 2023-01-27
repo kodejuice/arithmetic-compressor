@@ -6,7 +6,7 @@ from arithmetic_compressor import ppm
 
 # 1
 def ppm_model():
-  data = [2,1,0]*150
+  data = [2, 1, 0] * 150
   N = len(data)
   entropy = round(util.h(data))
   print('\n==PPM==')
@@ -26,14 +26,14 @@ def ppm_model():
 
 # 2
 def multi_ppm_model():
-  data = [1,1,2,0,3,3]*150
+  data = [1, 1, 2, 0, 3, 3] * 150
   N = len(data)
   entropy = round(util.h(data))
   print('\n==Multi PPM==')
   print(f"To compress: '{''.join(map(str, data))}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = ppm.MultiPPM([0, 1, 2,3], 9)
+  model = ppm.MultiPPM([0, 1, 2, 3], 9)
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)

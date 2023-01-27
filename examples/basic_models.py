@@ -1,8 +1,9 @@
 import sys
 sys.path.append('..')
 
-from arithmetic_compressor import AECompressor, util
 from arithmetic_compressor import base_adaptive_model
+from arithmetic_compressor import AECompressor, util
+
 
 # 1
 def basic_frequency_table():
@@ -13,7 +14,8 @@ def basic_frequency_table():
   print(f"To compress: '{data}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = base_adaptive_model.BaseFrequencyTable({'a': .25, 'b': .25, 'c': .25, 'd': .25})
+  model = base_adaptive_model.BaseFrequencyTable(
+      {'a': .25, 'b': .25, 'c': .25, 'd': .25})
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)
@@ -33,7 +35,8 @@ def simple_adaptive_model():
   print(f"To compress: '{data}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = base_adaptive_model.SimpleAdaptiveModel({'a': .25, 'b': .25, 'c': .25, 'd': .25})
+  model = base_adaptive_model.SimpleAdaptiveModel(
+      {'a': .25, 'b': .25, 'c': .25, 'd': .25})
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)

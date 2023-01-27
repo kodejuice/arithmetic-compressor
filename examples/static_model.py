@@ -1,8 +1,9 @@
 import sys
 sys.path.append('..')
 
-from arithmetic_compressor import AECompressor, util
 from arithmetic_compressor import static_model
+from arithmetic_compressor import AECompressor, util
+
 
 # 1
 def sample1():

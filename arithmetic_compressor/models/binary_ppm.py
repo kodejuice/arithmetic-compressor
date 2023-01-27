@@ -1,6 +1,6 @@
-from models.base_adaptive_model import *
-from models.ppm import MultiPPM
-from util import *
+from arithmetic_compressor.models.base_adaptive_model import *
+from arithmetic_compressor.models.ppm import MultiPPM
+from arithmetic_compressor.util import *
 
 """
 Binary PPM

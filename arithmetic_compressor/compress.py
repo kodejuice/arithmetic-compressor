@@ -1,5 +1,5 @@
 import copy
-import arithmetic_coding as AE
+import arithmetic_compressor.arithmetic_coding as AE
 
 # Compress using arithmetic encoding
 

@@ -1,4 +1,4 @@
-from models.base_adaptive_model import *
+from arithmetic_compressor.models.base_adaptive_model import *
 
 """
 PPM

@@ -1,5 +1,5 @@
-from models.base_adaptive_model import BaseFrequencyTable
-from util import *
+from arithmetic_compressor.models.base_adaptive_model import BaseFrequencyTable
+from arithmetic_compressor.util import *
 
 SCALE_FACTOR = 4096
 

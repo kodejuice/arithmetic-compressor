@@ -1,5 +1,5 @@
 import random
-from util import *
+from arithmetic_compressor.util import *
 
 
 U = 10

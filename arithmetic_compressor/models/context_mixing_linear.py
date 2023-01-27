@@ -1,6 +1,6 @@
-from util import *
+from arithmetic_compressor.util import *
 from collections import OrderedDict
-from models.base_adaptive_model import BaseFrequencyTable
+from arithmetic_compressor.models.base_adaptive_model import BaseFrequencyTable
 
 # Adapted from the PAQ6 compressor
 # https://cs.fit.edu/~mmahoney/compression/paq6.cpp

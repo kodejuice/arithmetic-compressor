@@ -14,13 +14,14 @@ setup(
     long_description_content_type="text/markdown",
     url='https://github.com/kodejuice/arithmetic_compressor',
     packages=find_packages(),
+    test_suite='unittest.TestLoader().discover("tests")',
     classifiers=[
         "Programming Language :: Python :: 3",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent"
     ],
-    keywords=['arithmetic', 'coding', 'ppm', 'encoding',
+    keywords=['arithmetic', 'coding', 'ppm', 'encoding', 'encoder',
               'prediction', 'context mixing', 'adaptive models'],
     python_requires='>=3.0',
 )

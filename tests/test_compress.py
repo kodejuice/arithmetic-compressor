@@ -39,7 +39,7 @@ class TestCompress(unittest.TestCase):
     self.assertEqual(self.compress_with_model(model, self.data), self.data)
 
   def test_multi_ppm(self):
-    model = ppm.PPMModel([0, 1])
+    model = ppm.MultiPPM([0, 1])
     self.assertEqual(self.compress_with_model(model, self.data), self.data)
 
   def test_context_mixing_linear(self):

@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 
-from arithmetic_compressor import ppm
+from arithmetic_compressor.models import PPMModel, MultiPPM
 from arithmetic_compressor import AECompressor, util
 
 
@@ -14,7 +14,7 @@ def ppm_model():
   print(f"To compress: '{''.join(map(str, data))}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = ppm.PPMModel([0, 1, 2], True, 1)
+  model = PPMModel([0, 1, 2], True, 1)
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)
@@ -34,7 +34,7 @@ def multi_ppm_model():
   print(f"To compress: '{''.join(map(str, data))}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = ppm.MultiPPM([0, 1, 2, 3], 9)
+  model = MultiPPM([0, 1, 2, 3], 9)
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)

@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 
-from arithmetic_compressor import context_mixing_linear, context_mixing_logistic
+from arithmetic_compressor.models import ContextMix_Linear, ContextMix_Logistic
 from arithmetic_compressor import AECompressor, util
 
 
@@ -14,7 +14,7 @@ def context_mixing_linear_model():
   print(f"To compress: '{data}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = context_mixing_linear.ContextMix_Linear()
+  model = ContextMix_Linear()
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)
@@ -34,7 +34,7 @@ def context_mixing_logistic_model():
   print(f"To compress: '{data}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = context_mixing_logistic.ContextMix_Logistic(0.1)
+  model = ContextMix_Logistic(0.1)
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)

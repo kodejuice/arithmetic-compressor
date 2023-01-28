@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 
-from arithmetic_compressor import static_model
+from arithmetic_compressor.models import StaticModel
 from arithmetic_compressor import AECompressor, util
 
 
@@ -13,7 +13,7 @@ def sample1():
   print(f"\nTo compress: '{data}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = static_model.StaticModel({'a': 0.9, 'b': 0.1})
+  model = StaticModel({'a': 0.9, 'b': 0.1})
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)
@@ -32,7 +32,7 @@ def sample2():
   print(f"\nTo compress: '{data}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = static_model.StaticModel({'a': 0.7, 'b': 0.25, 'c': 0.05})
+  model = StaticModel({'a': 0.7, 'b': 0.25, 'c': 0.05})
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)

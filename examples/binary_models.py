@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 
-from arithmetic_compressor import binary_ppm
+from arithmetic_compressor.models import BaseBinaryModel, BinaryPPM, MultiBinaryPPM
 from arithmetic_compressor import AECompressor, util
 
 
@@ -14,7 +14,7 @@ def base_binary_model():
   print(f"To compress: '{''.join(map(str, data))}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = binary_ppm.BaseBinaryModel(8)
+  model = BaseBinaryModel(8)
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)
@@ -34,7 +34,7 @@ def binary_PPM():
   print(f"To compress: '{''.join(map(str, data))}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = binary_ppm.BinaryPPM(2)
+  model = BinaryPPM(2)
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)
@@ -54,7 +54,7 @@ def multi_binary_PPM():
   print(f"To compress: '{''.join(map(str, data))}' (len={len(data)})")
   print(f"Information content(entropy): {entropy}")
 
-  model = binary_ppm.MultiBinaryPPM(10)
+  model = MultiBinaryPPM(10)
   arit_coder = AECompressor(model)
 
   encoded = arit_coder.compress(data)

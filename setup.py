@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 VERSION = '0.1'
 setup(
-    name='arithmetic-compressor',
+    name='arithmetic_compressor',
     version=VERSION,
     author='Biereagu Sochima',
     author_email='<sochima.eb@gmail.com>',

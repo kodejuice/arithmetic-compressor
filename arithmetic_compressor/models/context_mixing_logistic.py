@@ -245,7 +245,7 @@ class NonstationaryMap(Base):
 
 class ContextMix_Logistic(Base):
   """Logistic/Neural network Mixer
-  A neural network is used to combine a large number of models.  The
+  A neural network is used to combine models.  The
   i'th model independently outputs t_i, which is the streched probability
   of the model.
 
@@ -274,7 +274,7 @@ class ContextMix_Logistic(Base):
     self.weights = [0] * len(self.models)
     self.learning_rate = learning_rate
 
-  def update_weights(self, bit):
+  def __update_weights(self, bit):
     """
     w_i := w_i + eta t_i (y - p1)
     p1 = squash(Σi wi t_i)
@@ -300,7 +300,7 @@ class ContextMix_Logistic(Base):
       model.update(bit)
 
     # update the weights of the models
-    self.update_weights(bit)
+    self.__update_weights(bit)
 
   def probability(self):
     """

@@ -12,14 +12,14 @@ Please note that these examples are provided as a learning resource, not as prod
 
 First `cd` into this folder.
 
-Then if you want to run the `basic_models.py` sample, you would run
+Then if you want to run the `basic_models.py` sample, you would do:
 
-```python
+```bash
 python basic_models.py
 ```
 
 To run the prediction tests:
 
-```python
+```bash
 python prediction_test.py
 ```

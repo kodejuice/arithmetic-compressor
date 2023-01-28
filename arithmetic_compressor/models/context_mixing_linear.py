@@ -4,6 +4,7 @@ from arithmetic_compressor.models.base_adaptive_model import BaseFrequencyTable
 
 # Adapted from the PAQ6 compressor
 # https://cs.fit.edu/~mmahoney/compression/paq6.cpp
+# Minimal implementation, doesn't include contexts only models
 # Only 3 submodels implemented (Default, CharModel, MatchModel)
 
 """
@@ -181,7 +182,7 @@ class ContextMix_Linear(Base):
     self.weights = weights
     self.contexts = contexts
 
-  def update_weights(self, bit):
+  def __update_weights(self, bit):
     """
     wi ← wi + [(S n1i - S1 ni) / (S0 S1)] error.
     """
@@ -209,7 +210,7 @@ class ContextMix_Linear(Base):
       model.update(bit)
 
     # update the weights of the models
-    self.update_weights(bit)
+    self.__update_weights(bit)
 
   def probability(self):
     """

@@ -76,6 +76,9 @@ A closer look at all the models.
 
 ### **Simple Models**
 
+- `BaseFrequencyTable(symbol_probabilities: dict)`
+- `SimpleAdaptiveModel(symbol_probabilities: dict, adaptation_rate: float)`
+
 The Simple Adaptive models are models that adapts to the probability of a symbol based on the frequency of the symbol in the data.
 
 Here's an example of how to use the Simple Adaptive models included in the library:
@@ -95,18 +98,22 @@ coder = AECompressor(model)
 
 # encode some data
 data = "AAAAAABBBCCC"
-N = len(data)
 compressed = coder.compress(data)
 
 # print the compressed data
 print(compressed) # => [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1]
 ```
 
-The `BaseFrequencyTable` does an incremental adaptation to adapt to the statistics of the input data while the `SimpleAdaptiveModel` is essentially an [exponential moving average](https://en.wikipedia.org/wiki/Moving_average).
+The `BaseFrequencyTable` does an incremental adaptation to adapt to the statistics of the input data while the `SimpleAdaptiveModel` is essentially an [exponential moving average](https://en.wikipedia.org/wiki/Moving_average) that adapts to input data relative to the `adaptation_rate`.
 
 ### **PPM models**
 
 > <https://en.wikipedia.org/wiki/Prediction_by_partial_matching>
+
+- `PPMModel(symbols: list, context_size: int)`
+- `MultiPPMModel(symbols: list, models: int)`
+- `BinaryPPMM(context_size: int)`
+- `MultiBinaryPPMM(models: int)`
 
 PPM (Prediction by Partial Matching) models are a type of context modeling that uses a set of previous symbols to predict the probability of the next symbol.
 Here's an example of how to use the PPM models included in the library:
@@ -125,7 +132,6 @@ coder = AECompressor(model)
 
 # encode some data
 data = "AAAAAABBBCCC"
-N = len(data)
 compressed = coder.compress(data)
 
 # print the compressed data
@@ -136,14 +142,13 @@ The **`MultiPPM`** model uses [weighted averaging](https://en.wikipedia.org/wiki
 
 ```python
 # create the model
-model = MultiPPM(['A', 'B', 'C'], models = 4)
+model = MultiPPM(['A', 'B', 'C'], models = 4) # will combine PPM models with context sizes of 0 to 4
 
 # create an arithmetic coder
 coder = AECompressor(model)
 
 # encode some data
 data = "AAAAAABBBCCC"
-N = len(data)
 compressed = coder.compress(data)
 
 # print the compressed data
@@ -168,7 +173,6 @@ coder = AECompressor(model)
 
 # encode some data
 data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1]
-N = len(data)
 compressed = coder.compress(data)
 
 # print the compressed data
@@ -178,6 +182,9 @@ print(compressed) # => [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1]
 Likewise the **`MultiBinaryPPM`** will combine several Binary PPM models to make prediction using weighted averaging.
 
 ### **Context Mixing models**
+
+- `ContextMix_Linear(models: List)`
+- `ContextMix_Logistic(learnung_rate: float)`
 
 Context mixing is a type of data compression algorithm in which the next-symbol predictions of two or more statistical models are combined to yield a prediction that is often more accurate than any of the individual predictions.
 
@@ -206,7 +213,6 @@ coder = AECompressor(model)
 
 # encode some data
 data = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-N = len(data)
 compressed = coder.compress(data)
 
 # print the compressed data
@@ -234,7 +240,6 @@ coder = AECompressor(model)
 
 # encode some data
 data = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-N = len(data)
 compressed = coder.compress(data)
 
 # print the compressed data
@@ -259,7 +264,6 @@ coder = AECompressor(model)
 
 # encode some data
 data = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-N = len(data)
 compressed = coder.compress(data)
 
 # print the compressed data
@@ -276,7 +280,7 @@ You can find more detailed examples in the [`/examples`](./examples/) folder in 
 
 ## Contribution
 
-We welcome contributions to this library. If you have an idea for a new feature or have found a bug, please submit an issue or a pull request.
+Contributions are very much welcome to the library. If you have an idea for a new feature or have found a bug, please submit an issue or a pull request.
 
 ## License
 

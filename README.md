@@ -274,7 +274,7 @@ print(compressed) # => [0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1]
 > _Please consider the performance and security issues before using it in production._
 > _Please also note that you should thoroughly test the library and its models with real-world data and use cases before deploying it in production._
 
-## Examples
+## More Examples
 
 You can find more detailed examples in the [`/examples`](./examples/) folder in the repository. These examples demonstrate the capabilities of the library and show how to use the different models.
 

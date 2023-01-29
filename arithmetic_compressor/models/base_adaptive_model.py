@@ -17,7 +17,7 @@ class BaseFrequencyTable:
     if len(symbols) < 2:
       exit("Invalid symbol length: 1, add more symbols")
 
-    self.name = "Base"
+    self.name = "Base Frequency Table"
     self.symbols = symbols
     self.scale_factor = 4096
 
@@ -76,7 +76,8 @@ class BaseFrequencyTable:
       symbol = symbol_pool[i]
       error += 1 - p[symbol]
       self.update(symbol)
-    print(f"percentage of error({self.name}): {error/N}")
+    # print(f"{self.name} [% error = {error/N}]")
+    return (self.name, error/N, f"{self.name} [% error = {error/N}]")
 
   def get_counts(self):
     """Called by the Context Mixing algorithm when

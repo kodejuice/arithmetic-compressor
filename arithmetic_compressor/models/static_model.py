@@ -40,4 +40,4 @@ class StaticModel:
 
   def test_model(self, gen_random=True, N=10000, custom_data=None):
     self.name = "Static Model"
-    BaseFrequencyTable.test_model(self, gen_random, N, custom_data)
+    return BaseFrequencyTable.test_model(self, gen_random, N, custom_data)

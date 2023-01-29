@@ -324,4 +324,4 @@ class ContextMix_Logistic(Base):
   def test_model(self, gen_random=True, N=10000, custom_data=None):
     self.symbols = [0, 1]
     self.name = "Context Mixing<Logistic>"
-    BaseFrequencyTable.test_model(self, gen_random, N, custom_data)
+    return BaseFrequencyTable.test_model(self, gen_random, N, custom_data)

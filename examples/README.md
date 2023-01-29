@@ -12,14 +12,22 @@ Please note that these examples are provided as a learning resource, not as prod
 
 First `cd` into this folder.
 
-Then if you want to run the `basic_models.py` sample, you would do:
+Then if you want to run the `context_mixing_models.py` sample, you would do:
 
 ```bash
-python basic_models.py
+python context_mixing_models.py
 ```
+
+Sample output:
+
+![Example run(context mixing)](../examples/screenshots/example_run_context_mixing.png)
 
 To run the prediction tests:
 
 ```bash
 python prediction_test.py
 ```
+
+Sample output:
+
+![Prediction test result](../examples/screenshots/prediction_test.png)

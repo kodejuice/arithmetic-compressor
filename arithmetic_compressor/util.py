@@ -2,7 +2,7 @@ import math
 import random
 
 
-def H(X, N: str | list | int = 1):
+def H(X, N=1):
   """Compute entropy from two input types
 
   Args:

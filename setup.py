@@ -12,7 +12,7 @@ setup(
     description='An implementation of the Arithmetic Coding algorithm in Python, along with advanced models like PPM (Prediction by Partial Matching), Context Mixing and Simple Adaptive models',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url='https://github.com/kodejuice/arithmetic_compressor',
+    url='https://github.com/kodejuice/arithmetic-compressor',
     packages=find_packages(),
     test_suite='unittest.TestLoader().discover("tests")',
     classifiers=[
@@ -23,5 +23,5 @@ setup(
     ],
     keywords=['arithmetic', 'coding', 'ppm', 'encoding', 'encoder',
               'prediction', 'context mixing', 'adaptive models'],
-    python_requires='>=3.0',
+    python_requires='>=3.7',
 )

@@ -2,7 +2,7 @@
 
 [![Run tests](https://github.com/kodejuice/arithmetic-compressor/actions/workflows/tests.yml/badge.svg)](https://github.com/kodejuice/arithmetic-compressor/actions/workflows/tests.yml)
 
-This library is an implementation of the [Arithmetic Coding](https://en.wikipedia.org/wiki/Arithmetic_coding) algorithm in Python, along with adaptive statistical data compression models like [PPM (Prediction by Partial Matching)](https://en.wikipedia.org/wiki/Prediction_by_partial_matching), [Context Mixing](en.wikipedia.org/wiki/Context_mixing) and Simple Adaptive models.
+This library is an implementation of the [Arithmetic Coding](https://en.wikipedia.org/wiki/Arithmetic_coding) algorithm in Python, along with adaptive statistical data compression models like [PPM (Prediction by Partial Matching)](https://en.wikipedia.org/wiki/Prediction_by_partial_matching), [Context Mixing](https://en.wikipedia.org/wiki/Context_mixing) and Simple Adaptive models.
 
 ## Installation
 

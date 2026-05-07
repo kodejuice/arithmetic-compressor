@@ -106,7 +106,7 @@ class Decoder(ArithmeticCoderBase):
     symbol = 0
     maxLow = None
     for k, r in probability.items():
-      if r.low <= value:
+      if r.low <= value and r.high - r.low > 0:
         if not maxLow:
           symbol = k
           maxLow = r
